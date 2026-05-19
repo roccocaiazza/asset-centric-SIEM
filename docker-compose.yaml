@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    container_name: elasticsearch
+    environment:
+      - node.name=es01
+      - cluster.name=siem-cluster
+      - discovery.type=single-node
+      - ELASTIC_PASSWORD=changeme123
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false  # semplificato per lab
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    networks:
+      - elastic
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.0
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=changeme123
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - elastic
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.13.0
+    container_name: logstash
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline
+    ports:
+      - "5044:5044"   # Filebeat input
+      - "5000:5000"   # Syslog input
+    depends_on:
+      - elasticsearch
+    networks:
+      - elastic
+
+volumes:
+  esdata:
+
+networks:
+  elastic:
+    driver: bridge
