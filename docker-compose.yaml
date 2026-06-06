@@ -30,7 +30,7 @@ services:
 
   # Imposta la password di kibana_system al primo avvio
   setup:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    image: curlimages/curl:8.7.1
     container_name: es-setup
     depends_on:
       elasticsearch:
@@ -38,15 +38,17 @@ services:
     networks:
       - elastic
     restart: "no"
-    entrypoint: >
-      bash -c "
-        echo 'Impostazione password kibana_system...' &&
-        curl -s -X POST -u elastic:asset-siem
-          http://elasticsearch:9200/_security/user/kibana_system/_password
-          -H 'Content-Type: application/json'
-          -d '{\"password\":\"asset-siem\"}' &&
-        echo 'Password kibana_system impostata.'
-      "
+    command:
+      - "-s"
+      - "-X"
+      - "POST"
+      - "-u"
+      - "elastic:asset-siem"
+      - "http://elasticsearch:9200/_security/user/kibana_system/_password"
+      - "-H"
+      - "Content-Type: application/json"
+      - "-d"
+      - '{"password":"asset-siem"}'
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.13.0
