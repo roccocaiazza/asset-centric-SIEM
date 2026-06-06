@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
@@ -8,10 +6,10 @@ services:
       - node.name=es01
       - cluster.name=siem-cluster
       - discovery.type=single-node
-      - ELASTIC_PASSWORD=changeme123
+      - ELASTIC_PASSWORD=asset-siem
       - bootstrap.memory_lock=true
       - xpack.security.enabled=true
-      - xpack.security.http.ssl.enabled=false  # semplificato per lab
+      - xpack.security.http.ssl.enabled=false
       - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
     ulimits:
       memlock:
@@ -23,6 +21,32 @@ services:
       - esdata:/usr/share/elasticsearch/data
     networks:
       - elastic
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -u elastic:asset-siem http://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  # Imposta la password di kibana_system al primo avvio
+  setup:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    container_name: es-setup
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - elastic
+    restart: "no"
+    entrypoint: >
+      bash -c "
+        echo 'Impostazione password kibana_system...' &&
+        curl -s -X POST -u elastic:asset-siem
+          http://elasticsearch:9200/_security/user/kibana_system/_password
+          -H 'Content-Type: application/json'
+          -d '{\"password\":\"asset-siem\"}' &&
+        echo 'Password kibana_system impostata.'
+      "
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.13.0
@@ -30,11 +54,12 @@ services:
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
       - ELASTICSEARCH_USERNAME=kibana_system
-      - ELASTICSEARCH_PASSWORD=changeme123
+      - ELASTICSEARCH_PASSWORD=asset-siem
     ports:
       - "5601:5601"
     depends_on:
-      - elasticsearch
+      setup:
+        condition: service_completed_successfully
     networks:
       - elastic
 
@@ -47,7 +72,8 @@ services:
       - "5044:5044"   # Filebeat input
       - "5000:5000"   # Syslog input
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
     networks:
       - elastic
 
