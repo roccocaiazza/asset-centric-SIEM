@@ -55,6 +55,9 @@ services:
     container_name: kibana
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=a1b2c3d4e5f67h8i9j0k1l2m3n4o5p6q7r8s9t0A
+      - XPACK_SECURITY_ENCRYPTIONKEY=z9y8x7w6v5u4t3s2r1q0p9o8n7m6l5k4j3i2h1g0B
+      - XPACK_REPORTING_ENCRYPTIONKEY=1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0C
       - ELASTICSEARCH_USERNAME=kibana_system
       - ELASTICSEARCH_PASSWORD=asset-siem
     ports:
